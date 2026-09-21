@@ -24,4 +24,6 @@ go test ./...
 GOTOOLCHAIN=go1.22.12 go test ./...
 ```
 
-MIT licensed.
+## License
+
+MIT; see [LICENSE](LICENSE).

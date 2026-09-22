@@ -1,0 +1,495 @@
+# mixed-noise: a synthetic router with every kind of netdev that is not a
+# port, and ports that exercise labels, media and ordering.
+#
+# Ports: wan and lan1-lan3 are DSA user ports behind the conduit eth0; their
+# device (the switch) carries a label of its own, which must not win over the
+# port's own of_node/label. board.json lists LAN as lan3, lan1, lan2 (the
+# order on the case, not the natural one) and WAN as the ports array
+# ["sfp1", "wan"]. sfp1 has an SFP cage (of_node/sfp) and the label "SFP";
+# eth3 has its cage and its label ("sfp2") on the device's of_node. eth2 is a
+# USB NIC without any label. lan9 and lan10 are not on the board: natural
+# order puts lan9 first. lan10 is a bond slave (bonding_slave/), which is
+# still a port. wwan0 is an LTE modem in 802.3 mode (DEVTYPE=wwan): a port
+# with medium "wireless".
+#
+# Noise: br-lan (DEVTYPE=bridge), br-guest (only bridge/ and brif/, no
+# DEVTYPE), lan1.100 (DEVTYPE=vlan), bond0 (DEVTYPE=bond), bond1 (only
+# bonding/), team0 (DEVTYPE=team), macvlan0 (iflink = a local ifindex, with
+# lower_lan1), veth0 (a virtual NIC: reported only with VirtualAlways), ifb0,
+# dummy0, tap0 (iflink == ifindex, no device), tun0 and wg0 (type 65534),
+# gretap1 (iflink 0), wlan0 (DEVTYPE=wlan only), wlan1 (only a wireless/
+# directory, but a device link), wlan2 (only phy80211/), can0 (a CAN bus
+# controller: device-backed but type 280), broken0 (no type), gone0 (a
+# dangling symlink), bonding_masters (a file) and lo.
+#
+# Format: see loadTree in ports_test.go.
+
+-- etc/board.json --
+{
+	"model": {
+		"id": "example,mixed-noise",
+		"name": "Example mixed router"
+	},
+	"network": {
+		"lan": {
+			"ports": [
+				"lan3",
+				"lan1",
+				"lan2"
+			],
+			"protocol": "static"
+		},
+		"wan": {
+			"ports": [
+				"sfp1",
+				"wan"
+			],
+			"protocol": "dhcp"
+		},
+		"guest": {
+			"device": "wlan0"
+		}
+	}
+}
+
+-- sys/class/net/bonding_masters --
+bond0 bond1
+
+-- sys/class/net/ --
+gone0 -> ../../devices/virtual/net/gone0
+
+-- sys/class/net/bond0/ --
+type=1
+ifindex=30
+iflink=30
+flags=0x1403
+carrier=1
+carrier_changes=1
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:06:30
+uevent=DEVTYPE=bond\nINTERFACE=bond0\nIFINDEX=30
+bonding/mode=active-backup 1
+bonding/slaves=lan10
+lower_lan10
+
+-- sys/class/net/bond1/ --
+type=1
+ifindex=31
+iflink=31
+flags=0x1402
+carrier_changes=0
+operstate=down
+address=02:00:00:00:06:31
+uevent=INTERFACE=bond1\nIFINDEX=31
+bonding/mode=balance-rr 0
+bonding/slaves=
+
+-- sys/class/net/br-guest/ --
+type=1
+ifindex=33
+iflink=33
+flags=0x1003
+carrier=0
+carrier_changes=0
+operstate=down
+speed=-1
+duplex=unknown
+address=02:00:00:00:06:33
+uevent=INTERFACE=br-guest\nIFINDEX=33
+bridge/forward_delay=1500
+brif/
+
+-- sys/class/net/br-lan/ --
+type=1
+ifindex=32
+iflink=32
+flags=0x1003
+carrier=1
+carrier_changes=3
+operstate=up
+speed=1000
+duplex=unknown
+address=02:00:00:00:06:02
+uevent=DEVTYPE=bridge\nINTERFACE=br-lan\nIFINDEX=32
+bridge/forward_delay=1500
+brif/lan1
+brif/lan2
+brif/lan3
+lower_lan1
+lower_lan2
+lower_lan3
+
+-- sys/class/net/broken0/ --
+ifindex=46
+iflink=46
+
+-- sys/class/net/can0/ --
+type=280
+ifindex=45
+iflink=45
+flags=0x81
+carrier_changes=0
+operstate=down
+mtu=16
+uevent=INTERFACE=can0\nIFINDEX=45
+device/driver -> ../../../bus/platform/drivers/example-can
+
+-- sys/class/net/dummy0/ --
+type=1
+ifindex=40
+iflink=40
+flags=0x83
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=02:00:00:00:06:40
+uevent=INTERFACE=dummy0\nIFINDEX=40
+
+-- sys/class/net/eth0/ --
+type=1
+ifindex=2
+iflink=2
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:06:02
+uevent=INTERFACE=eth0\nIFINDEX=2
+dsa/tagging=edsa
+upper_lan1
+upper_lan2
+upper_lan3
+upper_wan
+device/uevent=DRIVER=example-eth
+device/driver -> ../../../bus/platform/drivers/example-eth
+
+-- sys/class/net/eth2/ --
+type=1
+ifindex=20
+iflink=20
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:06:20
+uevent=INTERFACE=eth2\nIFINDEX=20
+device/uevent=DRIVER=r8152\nDEVTYPE=usb_interface
+device/driver -> ../../../../../../bus/usb/drivers/r8152
+
+-- sys/class/net/eth3/ --
+type=1
+ifindex=21
+iflink=21
+flags=0x1003
+carrier=0
+carrier_changes=0
+operstate=down
+speed=-1
+duplex=unknown
+address=02:00:00:00:06:21
+uevent=INTERFACE=eth3\nIFINDEX=21
+device/uevent=DRIVER=example-eth
+device/of_node/label=sfp2\0
+device/of_node/sfp=\x00\x00\x00\x2a
+device/driver -> ../../../bus/platform/drivers/example-eth
+
+-- sys/class/net/gretap1/ --
+type=1
+ifindex=43
+iflink=0
+flags=0x1003
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=02:00:00:00:06:43
+uevent=INTERFACE=gretap1\nIFINDEX=43
+
+-- sys/class/net/ifb0/ --
+type=1
+ifindex=39
+iflink=39
+flags=0x83
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=02:00:00:00:06:39
+uevent=INTERFACE=ifb0\nIFINDEX=39
+
+-- sys/class/net/lan1/ --
+type=1
+ifindex=4
+iflink=2
+flags=0x1103
+carrier=1
+carrier_changes=4
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:06:02
+uevent=DEVTYPE=dsa\nINTERFACE=lan1\nIFINDEX=4
+of_node/label=lan1\0
+brport/state=3
+upper_br-lan
+upper_lan1.100
+upper_macvlan0
+lower_eth0
+master
+device/of_node/label=switch\0
+device/driver -> ../../../bus/mdio_bus/drivers/example-switch
+
+-- sys/class/net/lan1.100/ --
+type=1
+ifindex=34
+iflink=4
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:06:02
+uevent=DEVTYPE=vlan\nINTERFACE=lan1.100\nIFINDEX=34
+lower_lan1
+
+-- sys/class/net/lan10/ --
+type=1
+ifindex=24
+iflink=24
+flags=0x1803
+carrier=1
+carrier_changes=2
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:06:30
+uevent=INTERFACE=lan10\nIFINDEX=24
+bonding_slave/state=active
+upper_bond0
+master
+device/driver -> ../../../bus/platform/drivers/example-eth
+
+-- sys/class/net/lan2/ --
+type=1
+ifindex=5
+iflink=2
+flags=0x1103
+carrier=0
+carrier_changes=0
+operstate=lowerlayerdown
+speed=-1
+duplex=unknown
+address=02:00:00:00:06:02
+uevent=DEVTYPE=dsa\nINTERFACE=lan2\nIFINDEX=5
+of_node/label=lan2\0
+brport/state=3
+upper_br-lan
+lower_eth0
+master
+device/of_node/label=switch\0
+device/driver -> ../../../bus/mdio_bus/drivers/example-switch
+
+-- sys/class/net/lan3/ --
+type=1
+ifindex=6
+iflink=2
+flags=0x1103
+carrier=1
+carrier_changes=1
+operstate=up
+speed=10
+duplex=half
+address=02:00:00:00:06:02
+uevent=DEVTYPE=dsa\nINTERFACE=lan3\nIFINDEX=6
+of_node/label=lan3\0
+brport/state=3
+upper_br-lan
+lower_eth0
+master
+device/of_node/label=switch\0
+device/driver -> ../../../bus/mdio_bus/drivers/example-switch
+
+-- sys/class/net/lan9/ --
+type=1
+ifindex=23
+iflink=23
+flags=0x1003
+carrier=0
+carrier_changes=0
+operstate=down
+speed=-1
+duplex=unknown
+address=02:00:00:00:06:23
+uevent=INTERFACE=lan9\nIFINDEX=23
+of_node/label=lan9\0
+device/driver -> ../../../bus/platform/drivers/example-eth
+
+-- sys/class/net/lo/ --
+type=772
+ifindex=1
+iflink=1
+flags=0x9
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=00:00:00:00:00:00
+uevent=INTERFACE=lo\nIFINDEX=1
+
+-- sys/class/net/macvlan0/ --
+type=1
+ifindex=35
+iflink=4
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:06:35
+uevent=INTERFACE=macvlan0\nIFINDEX=35
+lower_lan1
+
+-- sys/class/net/sfp1/ --
+type=1
+ifindex=22
+iflink=22
+flags=0x1003
+carrier=1
+carrier_changes=3
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:06:22
+uevent=INTERFACE=sfp1\nIFINDEX=22
+of_node/label=SFP\0
+of_node/sfp=\x00\x00\x00\x29
+device/driver -> ../../../bus/platform/drivers/example-eth
+
+-- sys/class/net/tap0/ --
+type=1
+ifindex=41
+iflink=41
+flags=0x1002
+carrier_changes=0
+operstate=down
+address=02:00:00:00:06:41
+uevent=DEVTYPE=tap\nINTERFACE=tap0\nIFINDEX=41
+
+-- sys/class/net/team0/ --
+type=1
+ifindex=36
+iflink=36
+flags=0x1003
+carrier=0
+carrier_changes=0
+operstate=down
+address=02:00:00:00:06:36
+uevent=DEVTYPE=team\nINTERFACE=team0\nIFINDEX=36
+
+-- sys/class/net/tun0/ --
+type=65534
+ifindex=42
+iflink=42
+flags=0x1091
+carrier=1
+carrier_changes=0
+operstate=unknown
+uevent=DEVTYPE=tun\nINTERFACE=tun0\nIFINDEX=42
+
+-- sys/class/net/veth0/ --
+type=1
+ifindex=37
+iflink=38
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:06:37
+uevent=INTERFACE=veth0\nIFINDEX=37
+
+-- sys/class/net/wan/ --
+type=1
+ifindex=3
+iflink=2
+flags=0x1003
+carrier=1
+carrier_changes=6
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:06:03
+uevent=DEVTYPE=dsa\nINTERFACE=wan\nIFINDEX=3
+of_node/label=wan\0
+lower_eth0
+device/of_node/label=switch\0
+device/driver -> ../../../bus/mdio_bus/drivers/example-switch
+
+-- sys/class/net/wg0/ --
+type=65534
+ifindex=44
+iflink=44
+flags=0x90
+carrier=1
+carrier_changes=0
+operstate=unknown
+uevent=DEVTYPE=wireguard\nINTERFACE=wg0\nIFINDEX=44
+
+-- sys/class/net/wlan0/ --
+type=1
+ifindex=25
+iflink=25
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+address=02:00:00:00:06:25
+uevent=DEVTYPE=wlan\nINTERFACE=wlan0\nIFINDEX=25
+device/driver -> ../../../bus/pci/drivers/example-wifi
+
+-- sys/class/net/wlan1/ --
+type=1
+ifindex=26
+iflink=26
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+address=02:00:00:00:06:26
+uevent=INTERFACE=wlan1\nIFINDEX=26
+wireless/status=0x0000
+device/driver -> ../../../bus/usb/drivers/example-wext
+
+-- sys/class/net/wlan2/ --
+type=1
+ifindex=27
+iflink=27
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+address=02:00:00:00:06:27
+uevent=INTERFACE=wlan2\nIFINDEX=27
+phy80211/index=2
+device/driver -> ../../../bus/pci/drivers/example-wifi
+
+-- sys/class/net/wwan0/ --
+type=1
+ifindex=47
+iflink=47
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=unknown
+speed=-1
+duplex=unknown
+address=02:00:00:00:06:47
+uevent=DEVTYPE=wwan\nINTERFACE=wwan0\nIFINDEX=47
+device/uevent=DRIVER=qmi_wwan\nDEVTYPE=usb_interface
+device/driver -> ../../../../../../bus/usb/drivers/qmi_wwan

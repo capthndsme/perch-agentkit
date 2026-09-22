@@ -1,0 +1,282 @@
+# dsa-conduit: a DSA switch behind its CPU conduit (MediaTek MT798x class).
+# eth0 is the conduit (it has a dsa/ directory) and is not a port. lan1-lan3
+# are DSA user ports (DEVTYPE=dsa, iflink pointing at the conduit, the
+# conduit's MAC, labels in their own of_node); lan1 has no cable: speed -1,
+# duplex unknown, operstate lowerlayerdown. eth1 is a second GMAC the board
+# uses as WAN (board.json network.wan.device), not bridged and without a link;
+# its of_node carries no label. The bridge, a VLAN on it and four wireless
+# interfaces (one with a custom name) are noise.
+#
+# Format: see loadTree in ports_test.go.
+
+-- etc/board.json --
+{
+	"model": {
+		"id": "example,dsa-conduit",
+		"name": "Example DSA router"
+	},
+	"network": {
+		"lan": {
+			"ports": [
+				"lan1",
+				"lan2",
+				"lan3"
+			],
+			"protocol": "static"
+		},
+		"wan": {
+			"device": "eth1",
+			"protocol": "dhcp"
+		}
+	},
+	"wlan": {
+		"phy0": {
+			"path": "platform/soc/wifi"
+		}
+	}
+}
+
+-- sys/class/net/br-lan/ --
+type=1
+ifindex=7
+iflink=7
+flags=0x1003
+carrier=1
+carrier_changes=4
+operstate=up
+speed=1000
+duplex=unknown
+address=02:00:00:00:01:04
+mtu=1500
+uevent=DEVTYPE=bridge\nINTERFACE=br-lan\nIFINDEX=7
+bridge/forward_delay=1500
+brif/guest
+brif/lan1
+brif/lan2
+brif/lan3
+brif/phy0-ap0
+brif/phy1-ap0
+brif/phy1-ap1
+upper_br-lan.1
+lower_guest
+lower_lan1
+lower_lan2
+lower_lan3
+lower_phy0-ap0
+lower_phy1-ap0
+lower_phy1-ap1
+
+-- sys/class/net/br-lan.1/ --
+type=1
+ifindex=8
+iflink=7
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=1000
+duplex=unknown
+address=02:00:00:00:01:04
+mtu=1500
+uevent=DEVTYPE=vlan\nINTERFACE=br-lan.1\nIFINDEX=8
+lower_br-lan
+
+-- sys/class/net/eth0/ --
+type=1
+ifindex=2
+iflink=2
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=2500
+duplex=full
+address=02:00:00:00:01:04
+mtu=1504
+uevent=OF_NAME=mac\nOF_FULLNAME=/soc/ethernet/mac@0\nOF_COMPATIBLE_0=mediatek,eth-mac\nOF_COMPATIBLE_N=1\nINTERFACE=eth0\nIFINDEX=2
+dsa/tagging=mtk
+upper_lan1
+upper_lan2
+upper_lan3
+of_node/compatible=mediatek,eth-mac\0
+device/uevent=DRIVER=mtk_soc_eth\nOF_NAME=ethernet
+device/of_node/compatible=mediatek,eth\0
+device/driver -> ../../../bus/platform/drivers/mtk_soc_eth
+
+-- sys/class/net/eth1/ --
+type=1
+ifindex=3
+iflink=3
+flags=0x1003
+carrier=0
+carrier_changes=1
+operstate=down
+speed=-1
+duplex=unknown
+address=02:00:00:00:01:01
+mtu=1500
+uevent=OF_NAME=mac\nOF_FULLNAME=/soc/ethernet/mac@1\nOF_COMPATIBLE_0=mediatek,eth-mac\nOF_COMPATIBLE_N=1\nINTERFACE=eth1\nIFINDEX=3
+of_node/compatible=mediatek,eth-mac\0
+device/uevent=DRIVER=mtk_soc_eth\nOF_NAME=ethernet
+device/of_node/compatible=mediatek,eth\0
+device/driver -> ../../../bus/platform/drivers/mtk_soc_eth
+
+-- sys/class/net/guest/ --
+type=1
+ifindex=11
+iflink=11
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:01:02
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=guest\nIFINDEX=11
+phy80211/index=0
+phy80211/name=phy0
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=mt798x-wmac\nOF_NAME=wifi
+device/driver -> ../../../bus/platform/drivers/mt798x-wmac
+
+-- sys/class/net/lan1/ --
+type=1
+ifindex=6
+iflink=2
+flags=0x1103
+carrier=0
+carrier_changes=2
+operstate=lowerlayerdown
+speed=-1
+duplex=unknown
+address=02:00:00:00:01:04
+mtu=1500
+phys_port_name=p2
+phys_switch_id=00000000
+uevent=DEVTYPE=dsa\nOF_NAME=port\nOF_FULLNAME=/soc/ethernet/mdio-bus/switch@1f/ports/port@2\nOF_COMPATIBLE_N=0\nINTERFACE=lan1\nIFINDEX=6
+of_node/label=lan1\0
+brport/state=3
+upper_br-lan
+lower_eth0
+master
+device/uevent=DRIVER=mt7530-mdio\nOF_NAME=switch
+device/of_node/compatible=mediatek,mt7531\0
+device/driver -> ../../../bus/mdio_bus/drivers/mt7530-mdio
+
+-- sys/class/net/lan2/ --
+type=1
+ifindex=5
+iflink=2
+flags=0x1103
+carrier=1
+carrier_changes=3
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:01:04
+mtu=1500
+phys_port_name=p1
+phys_switch_id=00000000
+uevent=DEVTYPE=dsa\nOF_NAME=port\nOF_FULLNAME=/soc/ethernet/mdio-bus/switch@1f/ports/port@1\nOF_COMPATIBLE_N=0\nINTERFACE=lan2\nIFINDEX=5
+of_node/label=lan2\0
+brport/state=3
+upper_br-lan
+lower_eth0
+master
+device/uevent=DRIVER=mt7530-mdio\nOF_NAME=switch
+device/of_node/compatible=mediatek,mt7531\0
+device/driver -> ../../../bus/mdio_bus/drivers/mt7530-mdio
+
+-- sys/class/net/lan3/ --
+type=1
+ifindex=4
+iflink=2
+flags=0x1103
+carrier=1
+carrier_changes=5
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:01:04
+mtu=1500
+phys_port_name=p0
+phys_switch_id=00000000
+uevent=DEVTYPE=dsa\nOF_NAME=port\nOF_FULLNAME=/soc/ethernet/mdio-bus/switch@1f/ports/port@0\nOF_COMPATIBLE_N=0\nINTERFACE=lan3\nIFINDEX=4
+of_node/label=lan3\0
+brport/state=3
+upper_br-lan
+lower_eth0
+master
+device/uevent=DRIVER=mt7530-mdio\nOF_NAME=switch
+device/of_node/compatible=mediatek,mt7531\0
+device/driver -> ../../../bus/mdio_bus/drivers/mt7530-mdio
+
+-- sys/class/net/lo/ --
+type=772
+ifindex=1
+iflink=1
+flags=0x9
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=00:00:00:00:00:00
+mtu=65536
+uevent=INTERFACE=lo\nIFINDEX=1
+
+-- sys/class/net/phy0-ap0/ --
+type=1
+ifindex=12
+iflink=12
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:01:12
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy0-ap0\nIFINDEX=12
+phy80211/index=0
+phy80211/name=phy0
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=mt798x-wmac\nOF_NAME=wifi
+device/driver -> ../../../bus/platform/drivers/mt798x-wmac
+
+-- sys/class/net/phy1-ap0/ --
+type=1
+ifindex=9
+iflink=9
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:01:03
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy1-ap0\nIFINDEX=9
+phy80211/index=1
+phy80211/name=phy1
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=mt798x-wmac\nOF_NAME=wifi
+device/driver -> ../../../bus/platform/drivers/mt798x-wmac
+
+-- sys/class/net/phy1-ap1/ --
+type=1
+ifindex=10
+iflink=10
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:01:13
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy1-ap1\nIFINDEX=10
+phy80211/index=1
+phy80211/name=phy1
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=mt798x-wmac\nOF_NAME=wifi
+device/driver -> ../../../bus/platform/drivers/mt798x-wmac

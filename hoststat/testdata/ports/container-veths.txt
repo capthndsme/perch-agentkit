@@ -1,0 +1,208 @@
+# container-veths: a router in a container. Every interface is the inside
+# end of a veth (no device link, iflink pointing into the host's namespace,
+# 10 Gb/s), one per network zone, plus an ifb for SQM. There is no hardware
+# port at all, so VirtualAuto reports the veths. The trap: eth0's iflink (22)
+# equals the local ifb's ifindex (22); iflink is an index in the peer's
+# namespace and must never be resolved locally. mac0 is a macvlan on lan0
+# (iflink = a local ifindex, lower_lan0): stacked, not a port. vlan10 is a
+# VLAN the host created and handed in (its parent is in the host's namespace,
+# so there is no lower_* link): a virtual NIC like the veths. board.json is
+# the host's and names the eth0 veth as LAN, which is ignored: board.json
+# roles apply to hardware ports only. The WAN interfaces come from the caller
+# (the collector's default routes).
+#
+# Format: see loadTree in ports_test.go.
+
+-- etc/board.json --
+{
+	"model": {
+		"id": "example,x86-host",
+		"name": "Example x86 host"
+	},
+	"network": {
+		"lan": {
+			"device": "eth0",
+			"protocol": "static"
+		}
+	}
+}
+
+-- sys/class/net/eth0/ --
+type=1
+ifindex=21
+iflink=22
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:21
+mtu=1500
+uevent=INTERFACE=eth0\nIFINDEX=21
+
+-- sys/class/net/guest/ --
+type=1
+ifindex=25
+iflink=26
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:25
+mtu=1500
+uevent=INTERFACE=guest\nIFINDEX=25
+
+-- sys/class/net/ifb4wan0/ --
+type=1
+ifindex=22
+iflink=22
+flags=0x83
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=02:00:00:00:04:22
+mtu=1500
+uevent=INTERFACE=ifb4wan0\nIFINDEX=22
+
+-- sys/class/net/iot/ --
+type=1
+ifindex=27
+iflink=28
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:27
+mtu=1500
+uevent=INTERFACE=iot\nIFINDEX=27
+
+-- sys/class/net/lan0/ --
+type=1
+ifindex=29
+iflink=30
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:29
+mtu=1500
+uevent=INTERFACE=lan0\nIFINDEX=29
+upper_mac0
+
+-- sys/class/net/lo/ --
+type=772
+ifindex=1
+iflink=1
+flags=0x9
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=00:00:00:00:00:00
+mtu=65536
+uevent=INTERFACE=lo\nIFINDEX=1
+
+-- sys/class/net/mac0/ --
+type=1
+ifindex=39
+iflink=29
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:39
+mtu=1500
+uevent=INTERFACE=mac0\nIFINDEX=39
+lower_lan0
+
+-- sys/class/net/modem1/ --
+type=1
+ifindex=23
+iflink=24
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:23
+mtu=1500
+uevent=INTERFACE=modem1\nIFINDEX=23
+
+-- sys/class/net/modem2/ --
+type=1
+ifindex=33
+iflink=34
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:33
+mtu=1500
+uevent=INTERFACE=modem2\nIFINDEX=33
+
+-- sys/class/net/server/ --
+type=1
+ifindex=31
+iflink=32
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:31
+mtu=1500
+uevent=INTERFACE=server\nIFINDEX=31
+
+-- sys/class/net/vlan10/ --
+type=1
+ifindex=41
+iflink=5
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:41
+mtu=1500
+uevent=DEVTYPE=vlan\nINTERFACE=vlan10\nIFINDEX=41
+
+-- sys/class/net/wan0/ --
+type=1
+ifindex=35
+iflink=36
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:35
+mtu=1500
+uevent=INTERFACE=wan0\nIFINDEX=35
+
+-- sys/class/net/wan2/ --
+type=1
+ifindex=37
+iflink=38
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:04:37
+mtu=1500
+uevent=INTERFACE=wan2\nIFINDEX=37

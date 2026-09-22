@@ -1,0 +1,321 @@
+# independent-netdevs: every socket is its own netdev (Qualcomm IPQ807x
+# class, driver nss-dp): lan1-lan4 and wan each have a device link, no
+# DEVTYPE, iflink == ifindex, and their label under device/of_node/label (no
+# own of_node). There is no switch conduit. lan1 is administratively down, so
+# carrier, speed and duplex cannot be read. wan (2.5 Gb/s) is bridged into
+# LAN. Noise: bonding_masters (a regular file), the gre0 (type 778) / gretap0 /
+# erspan0 (type 1, iflink 0, down) tunnels the kernel creates, miireg
+# (type 0), the bridge and five wireless interfaces.
+#
+# Format: see loadTree in ports_test.go.
+
+-- etc/board.json --
+{
+	"model": {
+		"id": "example,independent-netdevs",
+		"name": "Example per-port-netdev router"
+	},
+	"led": {
+		"wan_port_link": {
+			"name": "WAN-PORT-LINK",
+			"type": "netdev",
+			"device": "wan",
+			"mode": "link_2500"
+		}
+	},
+	"network": {
+		"lan": {
+			"ports": [
+				"lan1",
+				"lan2",
+				"lan3",
+				"lan4"
+			],
+			"protocol": "static"
+		},
+		"wan": {
+			"device": "wan",
+			"protocol": "dhcp"
+		}
+	}
+}
+
+-- sys/class/net/bonding_masters --
+
+-- sys/class/net/br-lan/ --
+type=1
+ifindex=11
+iflink=11
+flags=0x1003
+carrier=1
+carrier_changes=3
+operstate=up
+speed=2500
+duplex=unknown
+address=02:00:00:00:03:46
+mtu=1500
+uevent=DEVTYPE=bridge\nINTERFACE=br-lan\nIFINDEX=11
+bridge/forward_delay=1500
+brif/lan2
+brif/lan3
+brif/lan4
+brif/phy0-ap0
+brif/phy0-ap1
+brif/phy0-ap2
+brif/phy1-ap0
+brif/phy1-ap1
+brif/wan
+lower_lan2
+lower_lan3
+lower_lan4
+lower_phy0-ap0
+lower_phy0-ap1
+lower_phy0-ap2
+lower_phy1-ap0
+lower_phy1-ap1
+lower_wan
+
+-- sys/class/net/erspan0/ --
+type=1
+ifindex=10
+iflink=0
+flags=0x1002
+carrier_changes=0
+operstate=down
+address=00:00:00:00:00:00
+mtu=1450
+uevent=INTERFACE=erspan0\nIFINDEX=10
+
+-- sys/class/net/gre0/ --
+type=778
+ifindex=8
+iflink=0
+flags=0x80
+carrier_changes=0
+operstate=down
+address=00:00:00:00
+mtu=1476
+uevent=INTERFACE=gre0\nIFINDEX=8
+
+-- sys/class/net/gretap0/ --
+type=1
+ifindex=9
+iflink=0
+flags=0x1002
+carrier_changes=0
+operstate=down
+address=00:00:00:00:00:00
+mtu=1462
+uevent=INTERFACE=gretap0\nIFINDEX=9
+
+-- sys/class/net/lan1/ --
+type=1
+ifindex=6
+iflink=6
+flags=0x1002
+carrier_changes=0
+operstate=down
+address=02:00:00:00:03:46
+mtu=1500
+uevent=INTERFACE=lan1\nIFINDEX=6
+device/uevent=DRIVER=nss-dp\nOF_NAME=dp4\nOF_TYPE=network
+device/of_node/label=lan1\0
+device/driver -> ../../../bus/platform/drivers/nss-dp
+
+-- sys/class/net/lan2/ --
+type=1
+ifindex=5
+iflink=5
+flags=0x1103
+carrier=0
+carrier_changes=0
+operstate=down
+speed=-1
+duplex=unknown
+address=02:00:00:00:03:46
+mtu=1500
+uevent=INTERFACE=lan2\nIFINDEX=5
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=nss-dp\nOF_NAME=dp3\nOF_TYPE=network
+device/of_node/label=lan2\0
+device/driver -> ../../../bus/platform/drivers/nss-dp
+
+-- sys/class/net/lan3/ --
+type=1
+ifindex=4
+iflink=4
+flags=0x1103
+carrier=1
+carrier_changes=9
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:03:46
+mtu=1500
+uevent=INTERFACE=lan3\nIFINDEX=4
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=nss-dp\nOF_NAME=dp2\nOF_TYPE=network
+device/of_node/label=lan3\0
+device/driver -> ../../../bus/platform/drivers/nss-dp
+
+-- sys/class/net/lan4/ --
+type=1
+ifindex=3
+iflink=3
+flags=0x1103
+carrier=0
+carrier_changes=0
+operstate=down
+speed=-1
+duplex=unknown
+address=02:00:00:00:03:46
+mtu=1500
+uevent=INTERFACE=lan4\nIFINDEX=3
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=nss-dp\nOF_NAME=dp1\nOF_TYPE=network
+device/of_node/label=lan4\0
+device/driver -> ../../../bus/platform/drivers/nss-dp
+
+-- sys/class/net/lo/ --
+type=772
+ifindex=1
+iflink=1
+flags=0x9
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=00:00:00:00:00:00
+mtu=65536
+uevent=INTERFACE=lo\nIFINDEX=1
+
+-- sys/class/net/miireg/ --
+type=0
+ifindex=2
+iflink=2
+flags=0x0
+carrier_changes=0
+operstate=down
+address=
+mtu=0
+uevent=INTERFACE=miireg\nIFINDEX=2
+
+-- sys/class/net/phy0-ap0/ --
+type=1
+ifindex=21
+iflink=21
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:03:47
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy0-ap0\nIFINDEX=21
+phy80211/index=0
+phy80211/name=phy0
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=ath11k\nOF_NAME=wifi
+device/driver -> ../../../bus/platform/drivers/ath11k
+
+-- sys/class/net/phy0-ap1/ --
+type=1
+ifindex=25
+iflink=25
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:03:d2
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy0-ap1\nIFINDEX=25
+phy80211/index=0
+phy80211/name=phy0
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=ath11k\nOF_NAME=wifi
+device/driver -> ../../../bus/platform/drivers/ath11k
+
+-- sys/class/net/phy0-ap2/ --
+type=1
+ifindex=24
+iflink=24
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:03:57
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy0-ap2\nIFINDEX=24
+phy80211/index=0
+phy80211/name=phy0
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=ath11k\nOF_NAME=wifi
+device/driver -> ../../../bus/platform/drivers/ath11k
+
+-- sys/class/net/phy1-ap0/ --
+type=1
+ifindex=20
+iflink=20
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:03:48
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy1-ap0\nIFINDEX=20
+phy80211/index=1
+phy80211/name=phy1
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=ath11k\nOF_NAME=wifi
+device/driver -> ../../../bus/platform/drivers/ath11k
+
+-- sys/class/net/phy1-ap1/ --
+type=1
+ifindex=23
+iflink=23
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:03:58
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy1-ap1\nIFINDEX=23
+phy80211/index=1
+phy80211/name=phy1
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=ath11k\nOF_NAME=wifi
+device/driver -> ../../../bus/platform/drivers/ath11k
+
+-- sys/class/net/wan/ --
+type=1
+ifindex=7
+iflink=7
+flags=0x1103
+carrier=1
+carrier_changes=11
+operstate=up
+speed=2500
+duplex=full
+address=02:00:00:00:03:45
+mtu=1500
+uevent=INTERFACE=wan\nIFINDEX=7
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=nss-dp\nOF_NAME=dp6-syn\nOF_TYPE=network
+device/of_node/label=wan\0
+device/driver -> ../../../bus/platform/drivers/nss-dp

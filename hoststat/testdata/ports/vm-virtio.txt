@@ -1,0 +1,114 @@
+# vm-virtio: a virtual machine (no board.json) laid out like real sysfs:
+# every /sys/class/net entry is a symlink into /sys/devices, and each NIC's
+# device link leads to the virtio device whose driver link names virtio_net.
+# ens3 and ens4 are hardware-backed (device link), medium "virtual" from the
+# driver; ens3 reports no speed (-1), ens4 10 Gb/s. docker0 is a bridge and
+# veth1a2b3c4 the host end of a container's veth: a virtual NIC, reported
+# only with VirtualAlways because the host has hardware ports. Its iflink (5)
+# happens to equal tailscale0's local ifindex. tailscale0 is a tun device
+# (type 65534).
+#
+# Format: see loadTree in ports_test.go.
+
+-- sys/class/net/ --
+docker0 -> ../../devices/virtual/net/docker0
+ens3 -> ../../devices/pci0000:00/0000:00:03.0/virtio0/net/ens3
+ens4 -> ../../devices/pci0000:00/0000:00:04.0/virtio1/net/ens4
+lo -> ../../devices/virtual/net/lo
+tailscale0 -> ../../devices/virtual/net/tailscale0
+veth1a2b3c4 -> ../../devices/virtual/net/veth1a2b3c4
+
+-- sys/devices/pci0000:00/0000:00:03.0/virtio0/ --
+driver -> ../../../../bus/virtio/drivers/virtio_net
+uevent=DRIVER=virtio_net\nMODALIAS=virtio:d00000001v00001AF4
+
+-- sys/devices/pci0000:00/0000:00:03.0/virtio0/net/ens3/ --
+type=1
+ifindex=2
+iflink=2
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=-1
+duplex=unknown
+address=02:00:00:00:05:02
+mtu=1500
+uevent=INTERFACE=ens3\nIFINDEX=2
+device -> ../../../virtio0
+
+-- sys/devices/pci0000:00/0000:00:04.0/virtio1/ --
+driver -> ../../../../bus/virtio/drivers/virtio_net
+uevent=DRIVER=virtio_net\nMODALIAS=virtio:d00000001v00001AF4
+
+-- sys/devices/pci0000:00/0000:00:04.0/virtio1/net/ens4/ --
+type=1
+ifindex=3
+iflink=3
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:05:03
+mtu=1500
+uevent=INTERFACE=ens4\nIFINDEX=3
+device -> ../../../virtio1
+
+-- sys/devices/virtual/net/docker0/ --
+type=1
+ifindex=4
+iflink=4
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=unknown
+address=02:00:00:00:05:04
+mtu=1500
+uevent=DEVTYPE=bridge\nINTERFACE=docker0\nIFINDEX=4
+bridge/forward_delay=1500
+brif/veth1a2b3c4
+lower_veth1a2b3c4
+
+-- sys/devices/virtual/net/lo/ --
+type=772
+ifindex=1
+iflink=1
+flags=0x9
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=00:00:00:00:00:00
+mtu=65536
+uevent=INTERFACE=lo\nIFINDEX=1
+
+-- sys/devices/virtual/net/tailscale0/ --
+type=65534
+ifindex=5
+iflink=5
+flags=0x10d1
+carrier=1
+carrier_changes=0
+operstate=unknown
+mtu=1280
+uevent=DEVTYPE=tun\nINTERFACE=tailscale0\nIFINDEX=5
+
+-- sys/devices/virtual/net/veth1a2b3c4/ --
+type=1
+ifindex=6
+iflink=5
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+speed=10000
+duplex=full
+address=02:00:00:00:05:06
+mtu=1500
+uevent=INTERFACE=veth1a2b3c4\nIFINDEX=6
+brport/state=3
+upper_docker0
+master

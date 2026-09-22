@@ -1,0 +1,295 @@
+# gmac-wan: a DSA switch (MediaTek MT7621 class) plus a second GMAC that is
+# the case's WAN socket. The access point uses that socket as a LAN uplink, so
+# wan is a bridge member (brport/, upper_br-lan, master): its role stays
+# "wan" because board.json names it so. wan's label is in its own of_node.
+# eth0 is the DSA conduit; lan1-lan4 are user ports, lan1 negotiated
+# 100 Mb/s, lan2 and lan3 have no cable. The bridge (which has brif/, not to
+# be confused with a member's brport/), a VLAN on it and three wireless
+# interfaces are noise.
+#
+# Format: see loadTree in ports_test.go.
+
+-- etc/board.json --
+{
+	"model": {
+		"id": "example,gmac-wan",
+		"name": "Example GMAC-WAN router"
+	},
+	"led": {
+		"wan": {
+			"name": "WAN",
+			"sysfs": "green:wan",
+			"type": "netdev",
+			"device": "wan",
+			"mode": "link tx rx"
+		}
+	},
+	"network": {
+		"lan": {
+			"ports": [
+				"lan1",
+				"lan2",
+				"lan3",
+				"lan4"
+			],
+			"protocol": "static"
+		},
+		"wan": {
+			"device": "wan",
+			"protocol": "dhcp"
+		}
+	},
+	"system": {
+		"compat_version": "1.1"
+	}
+}
+
+-- sys/class/net/br-lan/ --
+type=1
+ifindex=8
+iflink=8
+flags=0x1003
+carrier=1
+carrier_changes=6
+operstate=up
+speed=1000
+duplex=unknown
+address=02:00:00:00:02:0c
+mtu=1500
+uevent=DEVTYPE=bridge\nINTERFACE=br-lan\nIFINDEX=8
+bridge/forward_delay=1500
+brif/lan1
+brif/lan2
+brif/lan3
+brif/lan4
+brif/phy0-ap0
+brif/phy1-ap0
+brif/phy1-ap1
+brif/wan
+upper_br-lan.1
+lower_lan1
+lower_lan2
+lower_lan3
+lower_lan4
+lower_phy0-ap0
+lower_phy1-ap0
+lower_phy1-ap1
+lower_wan
+
+-- sys/class/net/br-lan.1/ --
+type=1
+ifindex=9
+iflink=8
+flags=0x1003
+carrier=1
+carrier_changes=2
+operstate=up
+speed=1000
+duplex=unknown
+address=02:00:00:00:02:0c
+mtu=1500
+uevent=DEVTYPE=vlan\nINTERFACE=br-lan.1\nIFINDEX=9
+lower_br-lan
+
+-- sys/class/net/eth0/ --
+type=1
+ifindex=2
+iflink=2
+flags=0x1003
+carrier=1
+carrier_changes=1
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:02:0c
+mtu=1504
+uevent=OF_NAME=mac\nOF_FULLNAME=/ethernet/mac@0\nOF_COMPATIBLE_0=mediatek,eth-mac\nOF_COMPATIBLE_N=1\nINTERFACE=eth0\nIFINDEX=2
+dsa/tagging=mtk
+upper_lan1
+upper_lan2
+upper_lan3
+upper_lan4
+of_node/compatible=mediatek,eth-mac\0
+device/uevent=DRIVER=mtk_soc_eth\nOF_NAME=ethernet
+device/driver -> ../../../bus/platform/drivers/mtk_soc_eth
+
+-- sys/class/net/lan1/ --
+type=1
+ifindex=4
+iflink=2
+flags=0x1103
+carrier=1
+carrier_changes=7
+operstate=up
+speed=100
+duplex=full
+address=02:00:00:00:02:0c
+mtu=1500
+phys_port_name=p0
+phys_switch_id=00000000
+uevent=DEVTYPE=dsa\nOF_NAME=port\nOF_FULLNAME=/ethernet/mdio-bus/switch@1f/ports/port@0\nOF_COMPATIBLE_N=0\nINTERFACE=lan1\nIFINDEX=4
+of_node/label=lan1\0
+brport/state=3
+upper_br-lan
+lower_eth0
+master
+device/uevent=DRIVER=mt7530-mdio\nOF_NAME=switch
+device/driver -> ../../../bus/mdio_bus/drivers/mt7530-mdio
+
+-- sys/class/net/lan2/ --
+type=1
+ifindex=5
+iflink=2
+flags=0x1103
+carrier=0
+carrier_changes=0
+operstate=lowerlayerdown
+speed=-1
+duplex=unknown
+address=02:00:00:00:02:0c
+mtu=1500
+phys_port_name=p1
+phys_switch_id=00000000
+uevent=DEVTYPE=dsa\nOF_NAME=port\nOF_FULLNAME=/ethernet/mdio-bus/switch@1f/ports/port@1\nOF_COMPATIBLE_N=0\nINTERFACE=lan2\nIFINDEX=5
+of_node/label=lan2\0
+brport/state=3
+upper_br-lan
+lower_eth0
+master
+device/uevent=DRIVER=mt7530-mdio\nOF_NAME=switch
+device/driver -> ../../../bus/mdio_bus/drivers/mt7530-mdio
+
+-- sys/class/net/lan3/ --
+type=1
+ifindex=6
+iflink=2
+flags=0x1103
+carrier=0
+carrier_changes=0
+operstate=lowerlayerdown
+speed=-1
+duplex=unknown
+address=02:00:00:00:02:0c
+mtu=1500
+phys_port_name=p2
+phys_switch_id=00000000
+uevent=DEVTYPE=dsa\nOF_NAME=port\nOF_FULLNAME=/ethernet/mdio-bus/switch@1f/ports/port@2\nOF_COMPATIBLE_N=0\nINTERFACE=lan3\nIFINDEX=6
+of_node/label=lan3\0
+brport/state=3
+upper_br-lan
+lower_eth0
+master
+device/uevent=DRIVER=mt7530-mdio\nOF_NAME=switch
+device/driver -> ../../../bus/mdio_bus/drivers/mt7530-mdio
+
+-- sys/class/net/lan4/ --
+type=1
+ifindex=7
+iflink=2
+flags=0x1103
+carrier=1
+carrier_changes=3
+operstate=up
+speed=1000
+duplex=full
+address=02:00:00:00:02:0c
+mtu=1500
+phys_port_name=p3
+phys_switch_id=00000000
+uevent=DEVTYPE=dsa\nOF_NAME=port\nOF_FULLNAME=/ethernet/mdio-bus/switch@1f/ports/port@3\nOF_COMPATIBLE_N=0\nINTERFACE=lan4\nIFINDEX=7
+of_node/label=lan4\0
+brport/state=3
+upper_br-lan
+lower_eth0
+master
+device/uevent=DRIVER=mt7530-mdio\nOF_NAME=switch
+device/driver -> ../../../bus/mdio_bus/drivers/mt7530-mdio
+
+-- sys/class/net/lo/ --
+type=772
+ifindex=1
+iflink=1
+flags=0x9
+carrier=1
+carrier_changes=0
+operstate=unknown
+address=00:00:00:00:00:00
+mtu=65536
+uevent=INTERFACE=lo\nIFINDEX=1
+
+-- sys/class/net/phy0-ap0/ --
+type=1
+ifindex=10
+iflink=10
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:02:0c
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy0-ap0\nIFINDEX=10
+phy80211/index=0
+phy80211/name=phy0
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=mt7915e\nPCI_CLASS=0280
+device/driver -> ../../../bus/pci/drivers/mt7915e
+
+-- sys/class/net/phy1-ap0/ --
+type=1
+ifindex=11
+iflink=11
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:02:0b
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy1-ap0\nIFINDEX=11
+phy80211/index=1
+phy80211/name=phy1
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=mt7915e\nPCI_CLASS=0280
+device/driver -> ../../../bus/pci/drivers/mt7915e
+
+-- sys/class/net/phy1-ap1/ --
+type=1
+ifindex=12
+iflink=12
+flags=0x1103
+carrier=1
+carrier_changes=2
+operstate=up
+address=02:00:00:00:02:1b
+mtu=1500
+uevent=DEVTYPE=wlan\nINTERFACE=phy1-ap1\nIFINDEX=12
+phy80211/index=1
+phy80211/name=phy1
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=mt7915e\nPCI_CLASS=0280
+device/driver -> ../../../bus/pci/drivers/mt7915e
+
+-- sys/class/net/wan/ --
+type=1
+ifindex=3
+iflink=3
+flags=0x1103
+carrier=0
+carrier_changes=2
+operstate=down
+speed=-1
+duplex=unknown
+address=02:00:00:00:02:0d
+mtu=1500
+uevent=OF_NAME=mac\nOF_FULLNAME=/ethernet/mac@1\nOF_COMPATIBLE_0=mediatek,eth-mac\nOF_COMPATIBLE_N=1\nINTERFACE=wan\nIFINDEX=3
+of_node/label=wan\0
+brport/state=3
+upper_br-lan
+master
+device/uevent=DRIVER=mtk_soc_eth\nOF_NAME=ethernet
+device/driver -> ../../../bus/platform/drivers/mtk_soc_eth
